@@ -23,11 +23,12 @@ async function getAIResponse(q) {
     try { const r = await aiModel.generateContent(q); return r.response.text(); } catch(e) { return '❌ AI error'; }
 }
 
-// ========== FITUR BARU PENGGANTI DOWNLOADER ==========
+// ========== FITUR PENGGANTI DOWNLOADER ==========
 async function randomQuote(sock, to) {
     try {
         const res = await axios.get('https://api.quotable.io/random');
-        await sock.sendMessage(to, { text: 📝 *Kata Mutiara*\n\n"${res.data.content}"\n— ${res.data.author} });
+        const msg = 📝 *Kata Mutiara*\n\n"${res.data.content}"\n— ${res.data.author};
+        await sock.sendMessage(to, { text: msg });
     } catch(e) { await sock.sendMessage(to, { text: '❌ Gagal ambil quote' }); }
 }
 
@@ -66,7 +67,7 @@ async function simiChat(sock, to, msg) {
     } catch(e) { await sock.sendMessage(to, { text: '❌ Simi error' }); }
 }
 
-// ========== STIKER (tetap ada) ==========
+// ========== STIKER ==========
 async function createSticker(sock, to, buffer) {
     const input = './temp.jpg';
     const output = './sticker.webp';
@@ -82,7 +83,7 @@ async function createSticker(sock, to, buffer) {
     fs.unlinkSync(input); fs.unlinkSync(output);
 }
 
-// ========== WIKI (tetap ada) ==========
+// ========== WIKI ==========
 async function wikiSearch(sock, to, query) {
     try {
         const res = await axios.get(https://id.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)});
@@ -105,10 +106,16 @@ async function startBot() {
         } else if (connection === 'close') startBot();
     });
 
+    // Event anggota grup masuk/keluar (LENGKAP)
     sock.ev.on('group-participants.update', async (update) => {
-        if (update.action === 'add') {
-            for (let user of update.participants) {
-                await sock.sendMessage(update.id, { text: 👋 Selamat datang @${user.split('@')[0]}! Semoga betah., mentions: [user] });
+        const { id, participants, action } = update;
+        if (action === 'add') {
+            for (let user of participants) {
+                await sock.sendMessage(id, { text: 👋 Selamat datang @${user.split('@')[0]}! Semoga betah., mentions: [user] });
+            }
+        } else if (action === 'remove') {
+            for (let user of participants) {
+                await sock.sendMessage(id, { text: 👋 Selamat tinggal @${user.split('@')[0]}, semoga sukses., mentions: [user] });
             }
         }
     });
@@ -161,28 +168,23 @@ async function startBot() {
 Prefix juga bisa pakai /`;
             await sock.sendMessage(sender, { text: menu });
         }
-        // FITUR BARU
         else if (cmd === 'quote') await randomQuote(sock, sender);
         else if (cmd === 'fakta') await randomFact(sock, sender);
         else if (cmd === 'pantun') await randomPantun(sock, sender);
         else if (cmd === 'meme') await randomMeme(sock, sender);
         else if (cmd === 'simi' && args.length) await simiChat(sock, sender, args.join(' '));
-        // AI TANYA
         else if (cmd === 'tanya' && args.length) {
             const question = args.join(' ');
             await sock.sendMessage(sender, { text: 🤔 *${question}*\n⏳ Memproses... });
             const answer = await getAIResponse(question);
             await sock.sendMessage(sender, { text: 🤖 *Jawaban:*\n${answer} });
         }
-        // STIKER
         else if (cmd === 'stiker' && msg.message?.imageMessage) {
             const buf = await downloadMediaMessage(msg, 'buffer', {});
             if (buf) await createSticker(sock, sender, buf);
             else await sock.sendMessage(sender, { text: '❌ Gagal mengambil foto' });
         }
-        // WIKI
         else if (cmd === 'wiki' && args.length) await wikiSearch(sock, sender, args.join(' '));
-        // ADMIN GRUP
         else if (cmd === 'kick' && sender.endsWith('@g.us')) {
             const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid;
             if (mentioned && mentioned.length) {
@@ -195,12 +197,10 @@ Prefix juga bisa pakai /`;
             const mentions = meta.participants.map(p => p.id);
             await sock.sendMessage(sender, { text: '📢 PEMBERITAHUAN 📢\n\n' + mentions.map(m => @${m.split('@')[0]}).join(' '), mentions });
         }
-        // LAPOR BUG
         else if (cmd === 'bug' && args.length) {
             await sock.sendMessage(OWNER_NUMBER, { text: 🐞 Laporan dari ${sender.split('@')[0]}: ${args.join(' ')} });
             await sock.sendMessage(sender, { text: '✅ Laporan terkirim' });
         }
-        // PERINTAH TIDAK DIKENAL (DIAM)
     });
 }
 
