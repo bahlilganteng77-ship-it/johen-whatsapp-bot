@@ -14,7 +14,7 @@
     "fluent-ffmpeg": "^2.1.2",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "ytdl-core": "^4.11.5",
-    "tikdownloader": "^1.0.7",
+    "trs-media-downloader": "latest",
     "instagram-url-direct": "^1.0.14",
     "net": "^1.0.2",
     "whois": "^2.13.0",
