@@ -1,12 +1,11 @@
-javascript
-// ======================== XSO BOT – FINAL EDITION ========================
+// ======================== XSO BOT – FINAL EDITION (FIXED) ========================
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const ytdl = require('ytdl-core');
-const { tiktokdl } = require('tikdownloader');
+const { TrsMediaDownloader } = require('trs-media-downloader'); // Pengganti tikdownloader
 const instagramGetUrl = require('instagram-url-direct');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
@@ -86,13 +85,22 @@ async function getAIResponse(question) {
 }
 
 // ======================== DOWNLOADER FUNCTIONS ========================
+// TikTok menggunakan trs-media-downloader
+const mediaDownloader = new TrsMediaDownloader();
+
 async function downloadTikTok(sock, to, url) {
     try {
-        const result = await tiktokdl(url);
-        const videoUrl = result.video.no_watermark;
-        const buffer = await axios.get(videoUrl, { responseType: 'arraybuffer' }).then(r => r.data);
-        await sock.sendMessage(to, { video: buffer, caption: '✅ TikTok by XSO' });
-    } catch (e) { await sock.sendMessage(to, { text: '❌ TikTok gagal: ' + e.message }); }
+        const result = await mediaDownloader.download(url);
+        if (result && result.url) {
+            const buffer = await axios.get(result.url, { responseType: 'arraybuffer' }).then(r => r.data);
+            await sock.sendMessage(to, { video: buffer, caption: '✅ TikTok by XSO' });
+        } else {
+            await sock.sendMessage(to, { text: '❌ Gagal mendapatkan URL video dari TikTok.' });
+        }
+    } catch (e) {
+        console.error('TikTok Error:', e);
+        await sock.sendMessage(to, { text: '❌ TikTok gagal: ' + e.message });
+    }
 }
 
 async function downloadInstagram(sock, to, url) {
@@ -122,7 +130,7 @@ async function downloadYouTubeAudio(sock, to, url) {
 
 async function downloadFacebook(sock, to, url) {
     try {
-        const api = await axios.get(`https://savetube.me/api/fb?url=${encodeURIComponent(url)}`);
+        const api = await axios.get(https://savetube.me/api/fb?url=${encodeURIComponent(url)});
         const videoUrl = api.data.video;
         const buffer = await axios.get(videoUrl, { responseType: 'arraybuffer' }).then(r => r.data);
         await sock.sendMessage(to, { video: buffer, caption: '✅ Facebook by XSO' });
@@ -131,7 +139,7 @@ async function downloadFacebook(sock, to, url) {
 
 async function downloadTwitter(sock, to, url) {
     try {
-        const api = await axios.get(`https://twitsave.com/api?url=${encodeURIComponent(url)}`);
+        const api = await axios.get(https://twitsave.com/api?url=${encodeURIComponent(url)});
         const videoUrl = api.data.video;
         const buffer = await axios.get(videoUrl, { responseType: 'arraybuffer' }).then(r => r.data);
         await sock.sendMessage(to, { video: buffer, caption: '✅ Twitter by XSO' });
@@ -140,7 +148,7 @@ async function downloadTwitter(sock, to, url) {
 
 async function downloadPinterest(sock, to, url) {
     try {
-        const api = await axios.get(`https://pinterestdownloader.io/api?url=${encodeURIComponent(url)}`);
+        const api = await axios.get(https://pinterestdownloader.io/api?url=${encodeURIComponent(url)});
         const videoUrl = api.data.video;
         const buffer = await axios.get(videoUrl, { responseType: 'arraybuffer' }).then(r => r.data);
         await sock.sendMessage(to, { video: buffer, caption: '✅ Pinterest by XSO' });
@@ -150,8 +158,8 @@ async function downloadPinterest(sock, to, url) {
 // ======================== FITUR UMUM ========================
 async function wikiSearch(sock, to, query) {
     try {
-        const res = await axios.get(`https://id.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`);
-        if (res.data.extract) await sock.sendMessage(to, { text: `📖 *${res.data.title}*\n\n${res.data.extract}` });
+        const res = await axios.get(https://id.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)});
+        if (res.data.extract) await sock.sendMessage(to, { text: 📖 *${res.data.title}*\n\n${res.data.extract} });
         else await sock.sendMessage(to, { text: '❌ Tidak ditemukan.' });
     } catch (e) { await sock.sendMessage(to, { text: '❌ Wiki error: ' + e.message }); }
 }
@@ -159,16 +167,16 @@ async function wikiSearch(sock, to, query) {
 async function weather(sock, to, city) {
     try {
         const API_KEY = process.env.OPENWEATHER_API_KEY || 'YOUR_API_KEY';
-        const res = await axios.get(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric&lang=id`);
+        const res = await axios.get(https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric&lang=id);
         const w = res.data;
-        await sock.sendMessage(to, { text: `🌤️ Cuaca di ${w.name}\n🌡️ Suhu: ${w.main.temp}°C\n💧 Kelembapan: ${w.main.humidity}%\n🌬️ Angin: ${w.wind.speed} m/s` });
+        await sock.sendMessage(to, { text: 🌤️ Cuaca di ${w.name}\n🌡️ Suhu: ${w.main.temp}°C\n💧 Kelembapan: ${w.main.humidity}%\n🌬️ Angin: ${w.wind.speed} m/s });
     } catch (e) { await sock.sendMessage(to, { text: '❌ Cuaca gagal. Pastikan API key valid.' }); }
 }
 
 async function lyrics(sock, to, song) {
     try {
-        const res = await axios.get(`https://api.lyrics.ovh/v1/${encodeURIComponent(song)}`);
-        if (res.data.lyrics) await sock.sendMessage(to, { text: `🎵 *${song}*\n\n${res.data.lyrics.substring(0, 4000)}` });
+        const res = await axios.get(https://api.lyrics.ovh/v1/${encodeURIComponent(song)});
+        if (res.data.lyrics) await sock.sendMessage(to, { text: 🎵 *${song}*\n\n${res.data.lyrics.substring(0, 4000)} });
         else await sock.sendMessage(to, { text: '❌ Lirik tidak ditemukan.' });
     } catch (e) { await sock.sendMessage(to, { text: '❌ Lirik error: ' + e.message }); }
 }
@@ -186,14 +194,14 @@ async function portScan(sock, to, ip) {
             socket.connect(port, ip);
         });
     }
-    await sock.sendMessage(to, { text: `🔍 Port terbuka di ${ip}:\n${open.join(', ') || 'Tidak ada'}` });
+    await sock.sendMessage(to, { text: 🔍 Port terbuka di ${ip}:\n${open.join(', ') || 'Tidak ada'} });
 }
 
 async function whoisLookup(sock, to, domain) {
     whois.lookup(domain, (err, data) => {
         if (err) return sock.sendMessage(to, { text: '❌ Whois gagal: ' + err.message });
         const short = data.split('\n').slice(0, 20).join('\n');
-        sock.sendMessage(to, { text: `📄 Whois ${domain}:\n${short}` });
+        sock.sendMessage(to, { text: 📄 Whois ${domain}:\n${short} });
     });
 }
 
@@ -208,23 +216,23 @@ async function spamMessage(sock, to, targetNumber, message, count) {
         await sock.sendMessage(jid, { text: message });
         await delay(1000);
     }
-    await sock.sendMessage(to, { text: `✅ Spam terkirim ${count}x ke ${targetNumber}` });
+    await sock.sendMessage(to, { text: ✅ Spam terkirim ${count}x ke ${targetNumber} });
 }
 
 async function generateQR(sock, to, data) {
-    const qrBuffer = await axios.get(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(data)}`, { responseType: 'arraybuffer' });
+    const qrBuffer = await axios.get(https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(data)}, { responseType: 'arraybuffer' });
     await sock.sendMessage(to, { image: qrBuffer.data, caption: '📱 QR Code siap' });
 }
 
 async function shortLink(sock, to, url) {
-    const res = await axios.get(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`);
-    await sock.sendMessage(to, { text: `🔗 Short link: ${res.data}` });
+    const res = await axios.get(https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)});
+    await sock.sendMessage(to, { text: 🔗 Short link: ${res.data} });
 }
 
 async function textToSpeech(sock, to, text) {
     try {
         const API_KEY = process.env.VOICERSS_API_KEY || 'YOUR_API_KEY';
-        const response = await axios.get(`https://api.voicerss.org/?key=${API_KEY}&hl=id&src=${encodeURIComponent(text)}`, { responseType: 'arraybuffer' });
+        const response = await axios.get(https://api.voicerss.org/?key=${API_KEY}&hl=id&src=${encodeURIComponent(text)}, { responseType: 'arraybuffer' });
         await sock.sendMessage(to, { audio: response.data, mimetype: 'audio/mpeg' });
     } catch (e) { await sock.sendMessage(to, { text: '❌ TTS gagal.' }); }
 }
@@ -238,7 +246,7 @@ async function demoteMember(sock, groupJid, userJid) {
 }
 async function tagAll(sock, groupJid, participants) {
     let mentions = participants.map(p => p.id);
-    let message = '📢 *XSO BOT* 📢\n\n' + mentions.map(m => `@${m.split('@')[0]}`).join(' ');
+    let message = '📢 XSO BOT 📢\n\n' + mentions.map(m => @${m.split('@')[0]}).join(' ');
     await sock.sendMessage(groupJid, { text: message, mentions });
 }
 async function leaveGroup(sock, groupJid) {
@@ -291,10 +299,9 @@ async function startBot() {
             }
         } else if (connection === 'open') {
             console.log('✅ XSO Bot online! Nomor:', BOT_NUMBER);
-            // Ubah nama profil bot menjadi @johenbangun
             try {
                 await sock.updateProfileName(BOT_NAME);
-                console.log(`✅ Nama profil berhasil diubah menjadi ${BOT_NAME}`);
+                console.log(✅ Nama profil berhasil diubah menjadi ${BOT_NAME});
             } catch (err) {
                 console.log('❌ Gagal ubah nama profil:', err);
             }
@@ -306,24 +313,24 @@ async function startBot() {
         const { id, participants, action } = update;
         const setting = groupSettings[id] || {};
         if (action === 'add') {
-            const welcomeMsg = setting.welcome || `👋 Selamat datang @{user}!\nSelamat bergabung semoga betah. 🎉`;
+            const welcomeMsg = setting.welcome || 👋 Selamat datang @{user}!\nSelamat bergabung semoga betah. 🎉;
             for (let user of participants) {
-                const finalMsg = welcomeMsg.replace('{user}', `@${user.split('@')[0]}`);
+                const finalMsg = welcomeMsg.replace('{user}', @${user.split('@')[0]});
                 await sock.sendMessage(id, { text: finalMsg, mentions: [user] });
             }
         } else if (action === 'remove') {
-            const goodbyeMsg = setting.goodbye || `👋 Selamat tinggal @{user}, semoga sukses.`;
+            const goodbyeMsg = setting.goodbye || 👋 Selamat tinggal @{user}, semoga sukses.;
             for (let user of participants) {
-                const finalMsg = goodbyeMsg.replace('{user}', `@${user.split('@')[0]}`);
+                const finalMsg = goodbyeMsg.replace('{user}', @${user.split('@')[0]});
                 await sock.sendMessage(id, { text: finalMsg, mentions: [user] });
             }
         } else if (action === 'promote') {
             for (let user of participants) {
-                await sock.sendMessage(id, { text: `👑 @${user.split('@')[0]} sekarang admin!`, mentions: [user] });
+                await sock.sendMessage(id, { text: 👑 @${user.split('@')[0]} sekarang admin!, mentions: [user] });
             }
         } else if (action === 'demote') {
             for (let user of participants) {
-                await sock.sendMessage(id, { text: `😞 @${user.split('@')[0]} bukan lagi admin.`, mentions: [user] });
+                await sock.sendMessage(id, { text: 😞 @${user.split('@')[0]} bukan lagi admin., mentions: [user] });
             }
         }
     });
@@ -348,7 +355,7 @@ async function startBot() {
             if (isKasar) {
                 try { await sock.sendMessage(sender, { delete: msg.key }); } catch(e) {}
                 const offender = msg.key.participant || sender;
-                await sock.sendMessage(sender, { text: `⚠️ @${offender.split('@')[0]} Tolong bahasa nya lebih sopan!`, mentions: [offender] });
+                await sock.sendMessage(sender, { text: ⚠️ @${offender.split('@')[0]} Tolong bahasa nya lebih sopan!, mentions: [offender] });
                 return;
             }
             const setting = groupSettings[sender] || {};
@@ -389,7 +396,7 @@ async function startBot() {
             else if (cmd === 'whois' && args[0]) await whoisLookup(sock, sender, args[0]);
             else if (cmd === 'ip' && args[0]) {
                 const ip = await getIP(args[0]);
-                await sock.sendMessage(sender, { text: `🌐 IP dari ${args[0]}: ${ip}` });
+                await sock.sendMessage(sender, { text: 🌐 IP dari ${args[0]}: ${ip} });
             }
             else if (cmd === 'spam' && args.length >= 3) {
                 const target = args[0];
@@ -407,9 +414,9 @@ async function startBot() {
             }
             else if (cmd === 'tanya' && args.length) {
                 const question = args.join(' ');
-                await sock.sendMessage(sender, { text: `🤔 *Pertanyaan:* ${question}\n\n⏳ _Sedang memproses..._` });
+                await sock.sendMessage(sender, { text: 🤔 *Pertanyaan:* ${question}\n\n⏳ _Sedang memproses..._ });
                 const answer = await getAIResponse(question);
-                await sock.sendMessage(sender, { text: `🤖 *Jawaban AI:*\n\n${answer}` });
+                await sock.sendMessage(sender, { text: 🤖 *Jawaban AI:*\n\n${answer} });
             }
             // KICK MULTI (hanya admin/owner)
             else if (cmd === 'kick' && sender.endsWith('@g.us')) {
@@ -451,9 +458,9 @@ async function startBot() {
                         await delay(1000);
                     } catch (err) { failed.push(target); }
                 }
-                let reply = `✅ Berhasil mengeluarkan ${kicked.length} anggota.\n`;
-                if (kicked.length) reply += `🔹 Keluar: ${kicked.map(j => `@${j.split('@')[0]}`).join(', ')}\n`;
-                if (failed.length) reply += `❌ Gagal: ${failed.map(j => `@${j.split('@')[0]}`).join(', ')}`;
+                let reply = ✅ Berhasil mengeluarkan ${kicked.length} anggota.\n;
+                if (kicked.length) reply += 🔹 Keluar: ${kicked.map(j => `@${j.split('@')[0]}).join(', ')}\n`;
+                if (failed.length) reply += ❌ Gagal: ${failed.map(j => `@${j.split('@')[0]}).join(', ')}`;
                 await sock.sendMessage(sender, { text: reply, mentions: [...kicked, ...failed] });
             }
             else if (cmd === 'promote' && sender.endsWith('@g.us')) {
@@ -481,14 +488,14 @@ async function startBot() {
                 if (!groupSettings[sender]) groupSettings[sender] = {};
                 groupSettings[sender].welcome = newWelcome;
                 fs.writeFileSync('group_settings.json', JSON.stringify(groupSettings, null, 2));
-                await sock.sendMessage(sender, { text: `✅ Pesan sambutan diupdate:\n${newWelcome}` });
+                await sock.sendMessage(sender, { text: ✅ Pesan sambutan diupdate:\n${newWelcome} });
             }
             else if (cmd === 'setgoodbye' && args.length) {
                 const newGoodbye = args.join(' ');
                 if (!groupSettings[sender]) groupSettings[sender] = {};
                 groupSettings[sender].goodbye = newGoodbye;
                 fs.writeFileSync('group_settings.json', JSON.stringify(groupSettings, null, 2));
-                await sock.sendMessage(sender, { text: `✅ Pesan perpisahan diupdate:\n${newGoodbye}` });
+                await sock.sendMessage(sender, { text: ✅ Pesan perpisahan diupdate:\n${newGoodbye} });
             }
             else if (cmd === 'antilink') {
                 const status = args[0] === 'on' ? true : (args[0] === 'off' ? false : null);
@@ -496,7 +503,7 @@ async function startBot() {
                     if (!groupSettings[sender]) groupSettings[sender] = {};
                     groupSettings[sender].antilink = status;
                     fs.writeFileSync('group_settings.json', JSON.stringify(groupSettings, null, 2));
-                    await sock.sendMessage(sender, { text: `✅ Anti-link ${status ? 'AKTIF' : 'NONAKTIF'}` });
+                    await sock.sendMessage(sender, { text: ✅ Anti-link ${status ? 'AKTIF' : 'NONAKTIF'} });
                 } else { await sock.sendMessage(sender, { text: 'Gunakan .antilink on/off' }); }
             }
             else if (cmd === 'antikasar') {
@@ -505,45 +512,45 @@ async function startBot() {
                     if (!groupSettings[sender]) groupSettings[sender] = {};
                     groupSettings[sender].antikasar = status;
                     fs.writeFileSync('group_settings.json', JSON.stringify(groupSettings, null, 2));
-                    await sock.sendMessage(sender, { text: `✅ Anti-kata kasar ${status ? 'AKTIF' : 'NONAKTIF'}` });
+                    await sock.sendMessage(sender, { text: ✅ Anti-kata kasar ${status ? 'AKTIF' : 'NONAKTIF'} });
                 } else { await sock.sendMessage(sender, { text: 'Gunakan .antikasar on/off' }); }
             }
             else if (cmd === 'adminlist' && sender.endsWith('@g.us')) {
                 const groupMeta = await sock.groupMetadata(sender);
-                const admins = groupMeta.participants.filter(p => p.admin).map(p => `👑 @${p.id.split('@')[0]}`);
-                await sock.sendMessage(sender, { text: `📋 *Daftar Admin Grup:*\n${admins.join('\n') || 'Tidak ada'}`, mentions: groupMeta.participants.filter(p => p.admin).map(p => p.id) });
+                const admins = groupMeta.participants.filter(p => p.admin).map(p => 👑 @${p.id.split('@')[0]});
+                await sock.sendMessage(sender, { text: 📋 *Daftar Admin Grup:*\n${admins.join('\n') || 'Tidak ada'}, mentions: groupMeta.participants.filter(p => p.admin).map(p => p.id) });
             }
             else if (cmd === 'bug' && args.length) {
                 const bugReport = args.join(' ');
                 const reporter = sender.split('@')[0];
                 const ownerJid = OWNER_NUMBER + '@s.whatsapp.net';
-                await sock.sendMessage(ownerJid, { text: `🐞 *LAPORAN BUG*\n📱 Nomor: ${reporter}\n📝 Pesan: ${bugReport}` });
+                await sock.sendMessage(ownerJid, { text: 🐞 *LAPORAN BUG*\n📱 Nomor: ${reporter}\n📝 Pesan: ${bugReport} });
                 await sock.sendMessage(sender, { text: '✅ Laporan bug terkirim. Terima kasih!' });
             }
             else if (cmd === 'menu' || cmd === 'help') {
                 const menu = `╔══════════════════════════════════════╗
 ║         🤖 XSO BOT – MENU LENGKAP       ║
 ╠══════════════════════════════════════╣
-║ 📥 *DOWNLOADER*                        ║
+║ 📥 DOWNLOADER                        ║
 ║   .download [url] - TikTok/IG/YT/FB/Twitter/Pinterest
 ║   .mp3 [yt_url] - YouTube to MP3       ║
 ║   .fb | .twt | .pin [url]              ║
 ║                                        ║
-║ 📚 *INFORMASI*                         ║
+║ 📚 INFORMASI                         ║
 ║   .wiki [query] - Wikipedia            ║
 ║   .cuaca [kota] - Cuaca                ║
 ║   .lirik [lagu] - Lirik                ║
 ║                                        ║
-║ 🛠️ *TOOLS*                             ║
+║ 🛠️ TOOLS                             ║
 ║   .portscan [ip] | .whois [domain]     ║
 ║   .ip [domain] | .spam [no] [msg] [n]  ║
 ║   .qr [data] | .short [url]            ║
 ║   .tts [teks] | .stiker (kirim foto)   ║
 ║                                        ║
-║ 🤖 *AI*                                ║
+║ 🤖 AI                                ║
 ║   .tanya [pertanyaan] - Tanya AI       ║
 ║                                        ║
-║ 👥 *MANAJEMEN GRUP*                    ║
+║ 👥 MANAJEMEN GRUP                    ║
 ║   .kick @user1 @user2 (admin/owner)    ║
 ║   .promote | .demote | .tagall         ║
 ║   .leave | .delete (reply)             ║
@@ -551,12 +558,12 @@ async function startBot() {
 ║   .antilink on/off | .antikasar on/off ║
 ║   .adminlist                           ║
 ║                                        ║
-║ 📢 *LAINNYA*                           ║
+║ 📢 LAINNYA                           ║
 ║   .menu - Menu ini                     ║
 ║   .bug [pesan] - Lapor bug             ║
 ║                                        ║
 ╠══════════════════════════════════════╣
-║ 📞 *LAPOR BUG*: ${OWNER_NUMBER}
+║ 📞 LAPOR BUG: ${OWNER_NUMBER}
 ╚══════════════════════════════════════╝`;
                 await sock.sendMessage(sender, { text: menu });
             }
@@ -570,6 +577,6 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 app.get('/', (req, res) => res.send('XSO Bot is running!'));
 app.get('/health', (req, res) => res.send('OK'));
-app.listen(PORT, () => console.log(`✅ HTTP server on port ${PORT}`));
+app.listen(PORT, () => console.log(✅ HTTP server on port ${PORT}));
 
 startBot().catch(console.error);
