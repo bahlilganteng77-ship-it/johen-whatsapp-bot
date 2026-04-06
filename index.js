@@ -1,12 +1,4 @@
-[20.11, 6/4/2026] Azka /@johenbangun: const api = await axios.get(https://savetube.me/api/fb?url=${encodeURIComponent(url)});
-SyntaxError: missing ) after argument list
-    at wrapSafe (node:internal/modules/cjs/loader:1637:18)
-    at Module._compile (node:internal/modules/cjs/loader:1679:20)
-    at Module.load (node:internal/modules/cjs/loader:1441:32)
-    at Function._load (node:internal/modules/cjs/loader:1263:12)
-    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
-    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
-[20.13, 6/4/2026] Azka /@johenbangun: const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
 const fs = require('fs');
 const axios = require('axios');
@@ -160,7 +152,6 @@ async function startBot() {
         const sender = msg.key.remoteJid;
         const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
 
-        // Filter kata kasar di grup
         if (sender.endsWith('@g.us') && text && !text.startsWith('.') && !text.startsWith('/')) {
             const lower = text.toLowerCase();
             if (kasarWords.some(k => lower.includes(k))) {
@@ -171,7 +162,6 @@ async function startBot() {
             }
         }
 
-        // Parsing perintah
         const prefixes = ['.', '/'];
         let cmd = null;
         let args = [];
@@ -186,7 +176,6 @@ async function startBot() {
         }
         if (!cmd && !msg.message?.imageMessage) return;
 
-        // Eksekusi perintah
         if (cmd === 'menu' || cmd === 'help') {
             const menu = `╔════════════════════════╗
 ║      XSO BOT MENU      ║
@@ -212,7 +201,7 @@ Prefix juga bisa pakai /`;
             else if (url.includes('youtube')) await downloadYouTube(sock, sender, url);
             else if (url.includes('facebook') || url.includes('fb.com')) await downloadFacebook(sock, sender, url);
             else if (url.includes('twitter') || url.includes('x.com')) await downloadTwitter(sock, sender, url);
-            else await sock.sendMessage(sender, { text: '❌ URL tidak didukung. Support: TikTok, IG, YouTube, FB, Twitter' });
+            else await sock.sendMessage(sender, { text: '❌ URL tidak didukung' });
         }
         else if (cmd === 'mp3' && args[0] && (args[0].includes('youtube') || args[0].includes('youtu.be'))) {
             await downloadYouTube(sock, sender, args[0], true);
@@ -228,7 +217,6 @@ Prefix juga bisa pakai /`;
         else if (cmd === 'stiker' && msg.message?.imageMessage) {
             const buffer = await downloadMediaMessage(msg, 'buffer', {});
             if (buffer) await createSticker(sock, sender, buffer);
-            else await sock.sendMessage(sender, { text: '❌ Gagal mengambil foto' });
         }
         else if (cmd === 'wiki' && args.length) {
             await wikiSearch(sock, sender, args.join(' '));
@@ -237,9 +225,7 @@ Prefix juga bisa pakai /`;
             const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid;
             if (mentioned && mentioned.length) {
                 await sock.groupParticipantsUpdate(sender, [mentioned[0]], 'remove');
-                await sock.sendMessage(sender, { text: ✅ @${mentioned[0].split('@')[0]} telah dikeluarkan, mentions: mentioned });
-            } else {
-                await sock.sendMessage(sender, { text: 'Mention user yang ingin dikick' });
+                await sock.sendMessage(sender, { text: ✅ @${mentioned[0].split('@')[0]} dikeluarkan, mentions: mentioned });
             }
         }
         else if (cmd === 'tagall' && sender.endsWith('@g.us')) {
@@ -251,10 +237,7 @@ Prefix juga bisa pakai /`;
             const bugReport = args.join(' ');
             const reporter = sender.split('@')[0];
             await sock.sendMessage(OWNER_NUMBER, { text: 🐞 *LAPORAN BUG*\n📱 Dari: ${reporter}\n📝 Pesan: ${bugReport} });
-            await sock.sendMessage(sender, { text: '✅ Laporan bug terkirim. Terima kasih!' });
-        }
-        else {
-            // Perintah tidak dikenal: diam saja
+            await sock.sendMessage(sender, { text: '✅ Laporan bug terkirim' });
         }
     });
 }
