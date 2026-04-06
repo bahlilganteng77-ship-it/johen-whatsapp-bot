@@ -1,4 +1,12 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage } = require('@whiskeysockets/baileys');
+[20.11, 6/4/2026] Azka /@johenbangun: const api = await axios.get(https://savetube.me/api/fb?url=${encodeURIComponent(url)});
+SyntaxError: missing ) after argument list
+    at wrapSafe (node:internal/modules/cjs/loader:1637:18)
+    at Module._compile (node:internal/modules/cjs/loader:1679:20)
+    at Module.load (node:internal/modules/cjs/loader:1441:32)
+    at Function._load (node:internal/modules/cjs/loader:1263:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+[20.13, 6/4/2026] Azka /@johenbangun: const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
 const fs = require('fs');
 const axios = require('axios');
