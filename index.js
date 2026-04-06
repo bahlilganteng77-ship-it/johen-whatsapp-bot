@@ -2,9 +2,6 @@ const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, download
 const { Boom } = require('@hapi/boom');
 const fs = require('fs');
 const axios = require('axios');
-const ytdl = require('ytdl-core');
-const { tiktokdl } = require('tiktok-dl-core');
-const instagramGetUrl = require('instagram-url-direct');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
 const express = require('express');
@@ -21,100 +18,118 @@ let groupSettings = {};
 if (fs.existsSync('group_settings.json')) groupSettings = JSON.parse(fs.readFileSync('group_settings.json'));
 
 const kasarWords = ['bangsat', 'memek', 'kontol', 'anjing', 'goblok', 'tolol', 'idiot'];
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function getAIResponse(q) {
     try { const r = await aiModel.generateContent(q); return r.response.text(); } catch(e) { return '❌ AI error'; }
 }
-async function downloadTikTok(sock, to, url) {
+
+// ========== FITUR BARU PENGGANTI DOWNLOADER ==========
+async function randomQuote(sock, to) {
     try {
-        const res = await tiktokdl(url);
-        const buf = await axios.get(res.video, { responseType: 'arraybuffer' }).then(r => r.data);
-        await sock.sendMessage(to, { video: buf, caption: '✅ TikTok' });
-    } catch(e) { await sock.sendMessage(to, { text: '❌ TikTok gagal' }); }
+        const res = await axios.get('https://api.quotable.io/random');
+        await sock.sendMessage(to, { text: 📝 *Kata Mutiara*\n\n"${res.data.content}"\n— ${res.data.author} });
+    } catch(e) { await sock.sendMessage(to, { text: '❌ Gagal ambil quote' }); }
 }
-async function downloadInstagram(sock, to, url) {
+
+async function randomFact(sock, to) {
     try {
-        const data = await instagramGetUrl(url);
-        const buf = await axios.get(data.url_list[0], { responseType: 'arraybuffer' }).then(r => r.data);
-        await sock.sendMessage(to, { video: buf, caption: '✅ Instagram' });
-    } catch(e) { await sock.sendMessage(to, { text: '❌ IG gagal' }); }
+        const res = await axios.get('https://uselessfacts.jsph.pl/random.json?language=en');
+        await sock.sendMessage(to, { text: 🔍 *Fakta Unik*\n\n${res.data.text} });
+    } catch(e) { await sock.sendMessage(to, { text: '❌ Gagal ambil fakta' }); }
 }
-async function downloadYouTube(sock, to, url, isAudio = false) {
+
+async function randomPantun(sock, to) {
+    const pantuns = [
+        "Pergi ke pasar membeli talas\nPulangnya mampir ke warung kopi\nKalau kamu suka baca pantun ini\nBalaslah dengan senyum manis di hati",
+        "Buah mangga buah kedondong\nEnak dimakan saat siang hari\nJangan suka berbicara panjang lebar\nKalau tidak ingin dicap yang menyebalkan",
+        "Jalan-jalan ke kota Blitar\nJangan lupa beli oleh-oleh\nKalau kamu ingin jadi pintar\nBelajarlah tanpa pernah lelah"
+    ];
+    const random = pantuns[Math.floor(Math.random() * pantuns.length)];
+    await sock.sendMessage(to, { text: 🎭 *Pantun*\n\n${random} });
+}
+
+async function randomMeme(sock, to) {
     try {
-        const stream = ytdl(url, { quality: isAudio ? 'highestaudio' : 'lowest', filter: isAudio ? 'audioonly' : 'audioandvideo' });
-        const buf = await new Promise((resolve, reject) => {
-            const chunks = [];
-            stream.on('data', d => chunks.push(d));
-            stream.on('end', () => resolve(Buffer.concat(chunks)));
-            stream.on('error', reject);
-        });
-        if (isAudio) await sock.sendMessage(to, { audio: buf, mimetype: 'audio/mpeg', fileName: 'audio.mp3' });
-        else await sock.sendMessage(to, { video: buf, caption: '✅ YouTube' });
-    } catch(e) { await sock.sendMessage(to, { text: '❌ YT gagal' }); }
+        const res = await axios.get('https://meme-api.com/gimme');
+        const meme = res.data;
+        const caption = 🖼️ *${meme.title}*\n👍 ${meme.ups} | 💬 ${meme.comments || 0};
+        const buffer = await axios.get(meme.url, { responseType: 'arraybuffer' }).then(r => r.data);
+        await sock.sendMessage(to, { image: buffer, caption });
+    } catch(e) { await sock.sendMessage(to, { text: '❌ Gagal ambil meme' }); }
 }
-async function downloadFacebook(sock, to, url) {
+
+async function simiChat(sock, to, msg) {
     try {
-        const api = await axios.get(https://savetube.me/api/fb?url=${encodeURIComponent(url)});
-        const buf = await axios.get(api.data.video, { responseType: 'arraybuffer' }).then(r => r.data);
-        await sock.sendMessage(to, { video: buf, caption: '✅ Facebook' });
-    } catch(e) { await sock.sendMessage(to, { text: '❌ FB gagal' }); }
+        const res = await axios.get(https://api.simsimi.vn/v1/simtalk?text=${encodeURIComponent(msg)}&lc=id);
+        if (res.data.message) await sock.sendMessage(to, { text: 🤖 *Simi:* ${res.data.message} });
+        else await sock.sendMessage(to, { text: '🤖 Simi: Maaf, saya tidak mengerti' });
+    } catch(e) { await sock.sendMessage(to, { text: '❌ Simi error' }); }
 }
-async function downloadTwitter(sock, to, url) {
-    try {
-        const api = await axios.get(https://twitsave.com/api?url=${encodeURIComponent(url)});
-        const buf = await axios.get(api.data.video, { responseType: 'arraybuffer' }).then(r => r.data);
-        await sock.sendMessage(to, { video: buf, caption: '✅ Twitter' });
-    } catch(e) { await sock.sendMessage(to, { text: '❌ Twitter gagal' }); }
-}
+
+// ========== STIKER (tetap ada) ==========
 async function createSticker(sock, to, buffer) {
     const input = './temp.jpg';
     const output = './sticker.webp';
     fs.writeFileSync(input, buffer);
     await new Promise((resolve, reject) => {
-        ffmpeg(input).outputOptions(['-vf', 'scale=512:512:force_original_aspect_ratio=increase,crop=512:512', '-vcodec', 'libwebp', '-lossless', '1']).save(output).on('end', resolve).on('error', reject);
+        ffmpeg(input)
+            .outputOptions(['-vf', 'scale=512:512:force_original_aspect_ratio=increase,crop=512:512', '-vcodec', 'libwebp', '-lossless', '1'])
+            .save(output)
+            .on('end', resolve)
+            .on('error', reject);
     });
     await sock.sendMessage(to, { sticker: fs.readFileSync(output) });
     fs.unlinkSync(input); fs.unlinkSync(output);
 }
+
+// ========== WIKI (tetap ada) ==========
 async function wikiSearch(sock, to, query) {
     try {
         const res = await axios.get(https://id.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)});
-        if (res.data.extract) await sock.sendMessage(to, { text: 📖 ${res.data.title}\n${res.data.extract.substring(0, 1500)} });
+        if (res.data.extract) await sock.sendMessage(to, { text: 📖 *${res.data.title}*\n\n${res.data.extract.substring(0, 1500)} });
+        else await sock.sendMessage(to, { text: '❌ Tidak ditemukan' });
     } catch(e) { await sock.sendMessage(to, { text: '❌ Wiki error' }); }
 }
 
+// ========== MAIN BOT ==========
 async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_info');
     const sock = makeWASocket({ auth: state, printQRInTerminal: true, browser: ['XSO Bot', 'Chrome', '110'] });
     sock.ev.on('creds.update', saveCreds);
     sock.ev.on('connection.update', async (update) => {
         const { connection, qr } = update;
-        if (qr) { qrcode.generate(qr, { small: true }); console.log('Scan QR dengan nomor 087777136295'); }
+        if (qr) { qrcode.generate(qr, { small: true }); console.log('📱 Scan QR dengan nomor 087777136295'); }
         if (connection === 'open') {
             console.log('✅ Bot online');
             try { await sock.updateProfileName(BOT_NAME); } catch(e) {}
         } else if (connection === 'close') startBot();
     });
+
     sock.ev.on('group-participants.update', async (update) => {
         if (update.action === 'add') {
-            for (let user of update.participants) await sock.sendMessage(update.id, { text: 👋 Selamat datang @${user.split('@')[0]}, mentions: [user] });
+            for (let user of update.participants) {
+                await sock.sendMessage(update.id, { text: 👋 Selamat datang @${user.split('@')[0]}! Semoga betah., mentions: [user] });
+            }
         }
     });
+
     sock.ev.on('messages.upsert', async ({ messages }) => {
         const msg = messages[0];
         if (!msg.message || msg.key.fromMe) return;
         const sender = msg.key.remoteJid;
         const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+
+        // Filter kasar di grup
         if (sender.endsWith('@g.us') && text && !text.startsWith('.') && !text.startsWith('/')) {
             const lower = text.toLowerCase();
             if (kasarWords.some(k => lower.includes(k))) {
                 try { await sock.sendMessage(sender, { delete: msg.key }); } catch(e) {}
                 const offender = msg.key.participant || sender;
-                await sock.sendMessage(sender, { text: ⚠️ @${offender.split('@')[0]} Tolong lebih sopan, mentions: [offender] });
+                await sock.sendMessage(sender, { text: ⚠️ @${offender.split('@')[0]} Tolong lebih sopan!, mentions: [offender] });
                 return;
             }
         }
+
         let cmd = null, args = [];
         for (let p of ['.', '/']) {
             if (text.startsWith(p)) {
@@ -125,47 +140,67 @@ async function startBot() {
             }
         }
         if (!cmd && !msg.message?.imageMessage) return;
+
+        // MENU
         if (cmd === 'menu' || cmd === 'help') {
-            await sock.sendMessage(sender, { text: '╔════════════════╗\n║   XSO BOT MENU  ║\n╠════════════════╣\n║ .download url   ║\n║ .mp3 yt_url     ║\n║ .fb url         ║\n║ .twt url        ║\n║ .tanya text     ║\n║ .stiker (foto)  ║\n║ .wiki query     ║\n║ .kick @user     ║\n║ .tagall         ║\n║ .bug pesan      ║\n╚════════════════╝' });
+            const menu = `╔════════════════════════╗
+║      XSO BOT MENU      ║
+╠════════════════════════╣
+║ .quote - Kata mutiara  ║
+║ .fakta - Fakta unik    ║
+║ .pantun - Pantun acak  ║
+║ .meme - Meme random    ║
+║ .simi [teks] - Chat AI ║
+║ .tanya [q] - Gemini AI ║
+║ .stiker (kirim foto)   ║
+║ .wiki [query]          ║
+║ .kick @user (admin)    ║
+║ .tagall (admin)        ║
+║ .bug [pesan]           ║
+╚════════════════════════╝
+Prefix juga bisa pakai /`;
+            await sock.sendMessage(sender, { text: menu });
         }
-        else if (cmd === 'download' && args[0]) {
-            const url = args[0];
-            if (url.includes('tiktok')) await downloadTikTok(sock, sender, url);
-            else if (url.includes('instagram')) await downloadInstagram(sock, sender, url);
-            else if (url.includes('youtube')) await downloadYouTube(sock, sender, url);
-            else if (url.includes('facebook') || url.includes('fb.com')) await downloadFacebook(sock, sender, url);
-            else if (url.includes('twitter') || url.includes('x.com')) await downloadTwitter(sock, sender, url);
-            else await sock.sendMessage(sender, { text: '❌ URL tidak didukung' });
-        }
-        else if (cmd === 'mp3' && args[0] && (args[0].includes('youtube') || args[0].includes('youtu.be'))) await downloadYouTube(sock, sender, args[0], true);
-        else if (cmd === 'fb' && args[0]) await downloadFacebook(sock, sender, args[0]);
-        else if (cmd === 'twt' && args[0]) await downloadTwitter(sock, sender, args[0]);
+        // FITUR BARU
+        else if (cmd === 'quote') await randomQuote(sock, sender);
+        else if (cmd === 'fakta') await randomFact(sock, sender);
+        else if (cmd === 'pantun') await randomPantun(sock, sender);
+        else if (cmd === 'meme') await randomMeme(sock, sender);
+        else if (cmd === 'simi' && args.length) await simiChat(sock, sender, args.join(' '));
+        // AI TANYA
         else if (cmd === 'tanya' && args.length) {
-            await sock.sendMessage(sender, { text: 🤔 ${args.join(' ')}\n⏳ Memproses... });
-            const ans = await getAIResponse(args.join(' '));
-            await sock.sendMessage(sender, { text: 🤖 ${ans} });
+            const question = args.join(' ');
+            await sock.sendMessage(sender, { text: 🤔 *${question}*\n⏳ Memproses... });
+            const answer = await getAIResponse(question);
+            await sock.sendMessage(sender, { text: 🤖 *Jawaban:*\n${answer} });
         }
+        // STIKER
         else if (cmd === 'stiker' && msg.message?.imageMessage) {
             const buf = await downloadMediaMessage(msg, 'buffer', {});
             if (buf) await createSticker(sock, sender, buf);
+            else await sock.sendMessage(sender, { text: '❌ Gagal mengambil foto' });
         }
+        // WIKI
         else if (cmd === 'wiki' && args.length) await wikiSearch(sock, sender, args.join(' '));
+        // ADMIN GRUP
         else if (cmd === 'kick' && sender.endsWith('@g.us')) {
             const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid;
             if (mentioned && mentioned.length) {
                 await sock.groupParticipantsUpdate(sender, [mentioned[0]], 'remove');
                 await sock.sendMessage(sender, { text: ✅ @${mentioned[0].split('@')[0]} dikeluarkan, mentions: mentioned });
-            }
+            } else await sock.sendMessage(sender, { text: 'Mention user yang ingin dikick' });
         }
         else if (cmd === 'tagall' && sender.endsWith('@g.us')) {
             const meta = await sock.groupMetadata(sender);
             const mentions = meta.participants.map(p => p.id);
-            await sock.sendMessage(sender, { text: '📢 @all', mentions });
+            await sock.sendMessage(sender, { text: '📢 PEMBERITAHUAN 📢\n\n' + mentions.map(m => @${m.split('@')[0]}).join(' '), mentions });
         }
+        // LAPOR BUG
         else if (cmd === 'bug' && args.length) {
             await sock.sendMessage(OWNER_NUMBER, { text: 🐞 Laporan dari ${sender.split('@')[0]}: ${args.join(' ')} });
             await sock.sendMessage(sender, { text: '✅ Laporan terkirim' });
         }
+        // PERINTAH TIDAK DIKENAL (DIAM)
     });
 }
 
@@ -173,4 +208,5 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 app.get('/', (req, res) => res.send('OK'));
 app.listen(PORT, () => console.log(HTTP server on ${PORT}));
+
 startBot().catch(console.error);
