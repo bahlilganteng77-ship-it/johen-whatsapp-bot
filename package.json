@@ -1,8 +1,7 @@
-json
 {
   "name": "xso-whatsapp-bot",
   "version": "3.0.0",
-  "description": "XSO WhatsApp Bot with Gemini AI & Group Management",
+  "description": "XSO WhatsApp Bot with Gemini AI",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
